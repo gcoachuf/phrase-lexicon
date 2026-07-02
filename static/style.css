@@ -663,6 +663,20 @@ header h1 {
   font-size: 0.9rem;
 }
 
+@media (max-width: 640px) {
+  .stats .direction-toggle {
+    flex: 1 0 100%;
+    width: 100%;
+    justify-content: stretch;
+  }
+
+  .stats .dir-btn {
+    flex: 1;
+    padding: 0.4rem 0.5rem;
+    font-size: 0.78rem;
+  }
+}
+
 @media (max-width: 480px) {
   .app {
     padding-left: 0.5rem;
