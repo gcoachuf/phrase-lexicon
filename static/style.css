@@ -239,6 +239,10 @@ header h1 {
 .footer {
   margin-top: 2.5rem;
   text-align: center;
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+  align-items: center;
 }
 
 .reset-link {

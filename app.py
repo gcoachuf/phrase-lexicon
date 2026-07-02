@@ -90,12 +90,27 @@ def reset_progress():
         return jsonify(
             {
                 "ok": False,
-                "error": 'Type the word RESET to confirm.',
+                "error": "Type the word RESET to confirm.",
             }
         ), 400
 
     count = db.reset_all_progress()
     return jsonify({"ok": True, "reset": count, "stats": db.get_stats()})
+
+
+@app.route("/api/reset-dict", methods=["POST"])
+def reset_dict():
+    data = request.get_json(force=True)
+    if data.get("confirmation") != "DELETE":
+        return jsonify(
+            {
+                "ok": False,
+                "error": "Type the word DELETE to confirm.",
+            }
+        ), 400
+
+    count = db.clear_all_cards()
+    return jsonify({"ok": True, "deleted": count, "stats": db.get_stats()})
 
 
 @app.route("/api/cron/sync")

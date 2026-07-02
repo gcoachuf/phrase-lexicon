@@ -64,7 +64,8 @@
     </div>
 
     <footer class="footer">
-      <button id="btn-reset-start" class="reset-link" type="button">Reset all training progress…</button>
+      <button id="btn-reset-progress" class="reset-link" type="button">Reset training progress…</button>
+      <button id="btn-reset-dict" class="reset-link" type="button">Reset phrase dictionary…</button>
     </footer>
   </div>
 
@@ -74,7 +75,7 @@
       <p id="reset-step-text" class="modal-text"></p>
 
       <div id="reset-step-3" class="reset-confirm-input hidden">
-        <label for="reset-input">Type <strong>RESET</strong> to confirm:</label>
+        <label for="reset-input" id="reset-input-label">Type <strong>RESET</strong> to confirm:</label>
         <input id="reset-input" type="text" autocomplete="off" spellcheck="false">
       </div>
 
@@ -91,12 +92,36 @@
     let direction = "{{ direction }}";
     let currentCard = null;
     let resetStep = 0;
+    let resetMode = "progress";
 
-    const RESET_PROMPTS = [
-      "This will erase all review progress (Again/Good/Easy history, due dates). Your phrases stay — only scheduling is cleared. Do you want to continue?",
-      "Are you absolutely sure? Every card will become new again, as if you never studied them.",
-      "Last chance. Type RESET below to permanently clear all training progress.",
-    ];
+    const RESET_CONFIG = {
+      progress: {
+        title: "Reset training progress?",
+        prompts: [
+          "This will erase all review progress (Again/Good/Easy history, due dates). Your phrases stay — only scheduling is cleared. Do you want to continue?",
+          "Are you absolutely sure? Every card will become new again, as if you never studied them.",
+          "Last chance. Type RESET below to permanently clear all training progress.",
+        ],
+        confirmWord: "RESET",
+        confirmLabel: "RESET",
+        finalButton: "Reset all progress",
+        endpoint: "/api/reset-progress",
+        successMessage: (n) => `Training progress reset for ${n} cards.`,
+      },
+      dict: {
+        title: "Reset phrase dictionary?",
+        prompts: [
+          "This will delete ALL imported phrases and all training progress. Your Google Doc is not changed — you can sync again later. Do you want to continue?",
+          "Are you absolutely sure? Every phrase will be removed from this trainer.",
+          "Last chance. Type DELETE below to permanently clear the entire phrase dictionary.",
+        ],
+        confirmWord: "DELETE",
+        confirmLabel: "DELETE",
+        finalButton: "Delete all phrases",
+        endpoint: "/api/reset-dict",
+        successMessage: (n) => `Removed ${n} phrase${n === 1 ? "" : "s"} from the dictionary.`,
+      },
+    };
 
     const els = {
       cardArea: document.getElementById("card-area"),
@@ -118,6 +143,8 @@
       resetInput: document.getElementById("reset-input"),
       resetStepIndicator: document.getElementById("reset-step-indicator"),
       btnResetNext: document.getElementById("btn-reset-next"),
+      resetTitle: document.getElementById("reset-title"),
+      resetInputLabel: document.getElementById("reset-input-label"),
     };
 
     function setDirection(next) {
@@ -237,11 +264,14 @@
       await loadNextCard();
     }
 
-    function openResetModal() {
+    function openResetModal(mode) {
+      resetMode = mode;
+      const cfg = RESET_CONFIG[mode];
       resetStep = 1;
       els.resetInput.value = "";
       els.resetStep3.classList.add("hidden");
-      els.resetStepText.textContent = RESET_PROMPTS[0];
+      els.resetTitle.textContent = cfg.title;
+      els.resetStepText.textContent = cfg.prompts[0];
       els.resetStepIndicator.textContent = "Step 1 of 3";
       els.btnResetNext.textContent = "Yes, continue";
       els.resetModal.classList.remove("hidden");
@@ -254,13 +284,15 @@
     }
 
     function advanceResetStep() {
+      const cfg = RESET_CONFIG[resetMode];
       if (resetStep < 3) {
         resetStep += 1;
-        els.resetStepText.textContent = RESET_PROMPTS[resetStep - 1];
+        els.resetStepText.textContent = cfg.prompts[resetStep - 1];
         els.resetStepIndicator.textContent = `Step ${resetStep} of 3`;
         if (resetStep === 3) {
           els.resetStep3.classList.remove("hidden");
-          els.btnResetNext.textContent = "Reset all progress";
+          els.resetInputLabel.innerHTML = `Type <strong>${cfg.confirmLabel}</strong> to confirm:`;
+          els.btnResetNext.textContent = cfg.finalButton;
           els.resetInput.focus();
         } else {
           els.resetStep3.classList.add("hidden");
@@ -269,8 +301,8 @@
         return;
       }
 
-      if (els.resetInput.value.trim() !== "RESET") {
-        showMessage('Type RESET exactly to confirm.', "error");
+      if (els.resetInput.value.trim() !== cfg.confirmWord) {
+        showMessage(`Type ${cfg.confirmWord} exactly to confirm.`, "error");
         els.resetInput.focus();
         return;
       }
@@ -278,18 +310,20 @@
     }
 
     async function performReset() {
+      const cfg = RESET_CONFIG[resetMode];
       els.btnResetNext.disabled = true;
       try {
-        const res = await fetch("/api/reset-progress", {
+        const res = await fetch(cfg.endpoint, {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ confirmation: "RESET" }),
+          body: JSON.stringify({ confirmation: cfg.confirmWord }),
         });
         const data = await res.json();
         if (!data.ok) throw new Error(data.error || "Reset failed");
         closeResetModal();
         updateStats(data.stats);
-        showMessage(`Training progress reset for ${data.reset} cards.`, "success");
+        const count = data.reset ?? data.deleted ?? 0;
+        showMessage(cfg.successMessage(count), "success");
         await loadNextCard();
       } catch (err) {
         showMessage(err.message, "error");
@@ -301,7 +335,8 @@
     document.getElementById("btn-en-de").addEventListener("click", () => setDirection("en_de"));
     document.getElementById("btn-de-en").addEventListener("click", () => setDirection("de_en"));
     document.getElementById("btn-sync").addEventListener("click", syncDoc);
-    document.getElementById("btn-reset-start").addEventListener("click", openResetModal);
+    document.getElementById("btn-reset-progress").addEventListener("click", () => openResetModal("progress"));
+    document.getElementById("btn-reset-dict").addEventListener("click", () => openResetModal("dict"));
     document.getElementById("btn-reset-cancel").addEventListener("click", closeResetModal);
     els.btnResetNext.addEventListener("click", advanceResetStep);
     els.resetModal.addEventListener("click", (e) => {

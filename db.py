@@ -153,6 +153,15 @@ def reset_all_progress() -> int:
         return cursor.rowcount
 
 
+def clear_all_cards() -> int:
+    """Delete all imported phrases. Returns number of cards removed."""
+    init_db()
+    with connect() as conn:
+        count = conn.execute("SELECT COUNT(*) FROM cards").fetchone()[0]
+        conn.execute("DELETE FROM cards")
+        return count
+
+
 def update_card(card_id: int, fields: dict) -> None:
     with connect() as conn:
         conn.execute(
