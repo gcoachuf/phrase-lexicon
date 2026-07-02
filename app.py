@@ -10,6 +10,15 @@ from sync_service import run_sync
 from parser import HINTS_DIR, doc_source
 
 app = Flask(__name__)
+BUILD_ID = os.environ.get("BUILD_ID", "e85c107-2")
+
+
+@app.after_request
+def disable_html_cache(response):
+    if response.content_type and "text/html" in response.content_type:
+        response.headers["Cache-Control"] = "no-store, no-cache, must-revalidate, max-age=0"
+        response.headers["Pragma"] = "no-cache"
+    return response
 
 
 def _sync_response(force: bool = False) -> dict:
@@ -26,7 +35,7 @@ def index():
     if direction not in ("en_de", "de_en"):
         direction = "de_en"
     stats = db.get_stats(direction)
-    return render_template("review.html", stats=stats, direction=direction)
+    return render_template("review.html", stats=stats, direction=direction, build_id=BUILD_ID)
 
 
 @app.route("/api/sync", methods=["POST"])

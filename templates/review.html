@@ -10,7 +10,7 @@
   <title>Nik's Deutsch Trainer</title>
   <link rel="manifest" href="/static/manifest.json">
   <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🇩🇪</text></svg>">
-  <link rel="stylesheet" href="/static/style.css">
+  <link rel="stylesheet" href="/static/style.css?v={{ build_id }}">
 </head>
 <body>
   <div class="app">
@@ -74,6 +74,7 @@
     <footer class="footer">
       <button id="btn-reset-progress" class="reset-link" type="button">Reset training progress…</button>
       <button id="btn-reset-dict" class="reset-link" type="button">Reset phrase dictionary…</button>
+      <p class="build-id">Build {{ build_id }}</p>
     </footer>
   </div>
 

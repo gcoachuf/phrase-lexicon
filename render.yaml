@@ -8,3 +8,5 @@ services:
     envVars:
       - key: GOOGLE_DOC_TAB
         value: t.x0jh4b5vn4op
+      - key: BUILD_ID
+        value: e85c107-2
