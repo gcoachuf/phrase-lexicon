@@ -38,12 +38,9 @@
       <span><strong id="stat-new">{{ stats.new }}</strong> neu</span>
     </div>
 
-    <p id="sync-status" class="sync-status">Sync adds new phrases only — your progress is kept.</p>
-
     <div id="message" class="message hidden"></div>
 
     <main id="card-area" class="card-area hidden">
-      <div class="deck-label" id="deck-label"></div>
       <div class="card" id="card">
         <div class="card-front" id="card-front"></div>
         <div id="hint-area" class="hint-area hidden">
@@ -75,6 +72,7 @@
       <button id="btn-reset-progress" class="reset-link" type="button">Reset training progress…</button>
       <button id="btn-reset-dict" class="reset-link" type="button">Reset phrase dictionary…</button>
       <p class="build-id">Build {{ build_id }}</p>
+      <p id="sync-status" class="sync-status">Sync adds new phrases only — your progress is kept.</p>
     </footer>
   </div>
 
@@ -144,7 +142,6 @@
       hintArea: document.getElementById("hint-area"),
       btnHint: document.getElementById("btn-hint"),
       hintContent: document.getElementById("hint-content"),
-      deckLabel: document.getElementById("deck-label"),
       btnReveal: document.getElementById("btn-reveal"),
       ratingArea: document.getElementById("rating-area"),
       message: document.getElementById("message"),
@@ -418,8 +415,6 @@
     function renderCard(card) {
       currentCard = card;
       resetCardUi();
-      const dirLabel = card.direction === "de_en" ? "DE → EN" : "EN → DE";
-      els.deckLabel.textContent = `${card.deck.replace("_", " ")} · ${dirLabel}`;
       renderCardFront(card.front);
       renderHint(card);
       els.cardBack.textContent = card.back;
