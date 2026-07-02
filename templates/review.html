@@ -70,8 +70,8 @@
 
     <footer class="footer">
       <div class="footer-actions">
-        <button id="btn-reset-progress" class="sync-btn" type="button">Reset</button>
-        <button id="btn-reset-dict" class="sync-btn" type="button">Delete</button>
+        <button id="btn-reset-progress" class="sync-btn" type="button">Reset Progress</button>
+        <button id="btn-reset-dict" class="sync-btn" type="button">Delete Dict</button>
       </div>
       <p class="build-id">Build {{ build_id }}</p>
       <p id="sync-status" class="sync-status">Sync adds new phrases only — your progress is kept.</p>
@@ -300,7 +300,7 @@
     }
 
     function resizeClozeInput(input) {
-      const minCh = 8;
+      const minCh = 6;
       const length = Math.max(minCh, input.value.length + 1);
       input.style.width = `${length}ch`;
     }
