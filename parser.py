@@ -276,22 +276,22 @@ class _BackHtmlConverter(HTMLParser):
     def handle_starttag(self, tag: str, attrs: list[tuple[str, str | None]]) -> None:
         if tag == "span":
             if self._span_is_underline(attrs):
-                self._parts.append("<u>")
+                self._parts.append("<strong>")
                 self._stack.append("u")
             else:
                 self._stack.append("n")
-        elif tag == "u":
-            self._parts.append("<u>")
+        elif tag in ("u", "strong", "b"):
+            self._parts.append("<strong>")
             self._stack.append("u")
 
     def handle_endtag(self, tag: str) -> None:
         if tag == "span" and self._stack:
             kind = self._stack.pop()
             if kind == "u":
-                self._parts.append("</u>")
-        elif tag == "u" and self._stack and self._stack[-1] == "u":
+                self._parts.append("</strong>")
+        elif tag in ("u", "strong", "b") and self._stack and self._stack[-1] == "u":
             self._stack.pop()
-            self._parts.append("</u>")
+            self._parts.append("</strong>")
 
     def handle_data(self, data: str) -> None:
         text = data.replace("\xa0", " ")
@@ -306,18 +306,19 @@ class _BackHtmlConverter(HTMLParser):
 
 
 def strip_back_html(back_html: str) -> str:
-    """Keep only <u> markup for safe answer rendering."""
+    """Keep only <strong> markup for safe answer rendering."""
     if not back_html:
         return ""
-    text = re.sub(r"<(?!/?u>)[^>]+>", "", back_html, flags=re.IGNORECASE)
-    if "<u>" not in text:
+    text = back_html.replace("<u>", "<strong>").replace("</u>", "</strong>")
+    text = re.sub(r"<(?!/?strong>)[^>]+>", "", text, flags=re.IGNORECASE)
+    if "<strong>" not in text:
         return ""
     return text
 
 
 def plain_back_text(back: str, back_html: str = "") -> str:
     if back_html:
-        return re.sub(r"</?u>", "", back_html, flags=re.IGNORECASE)
+        return re.sub(r"</?(?:u|strong)>", "", back_html, flags=re.IGNORECASE)
     return back
 
 

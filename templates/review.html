@@ -383,7 +383,9 @@
 
     function formatBackDisplay(card) {
       if (card.back_html) {
-        return card.back_html.replace(/<(?!\/?u>)[^>]+>/gi, "");
+        const html = card.back_html
+          .replace(/<\/?u>/gi, (tag) => tag.toLowerCase().replace("u", "strong"));
+        return html.replace(/<(?!\/?strong>)[^>]+>/gi, "");
       }
       return escapeHtml(card.back);
     }

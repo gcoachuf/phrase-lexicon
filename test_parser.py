@@ -34,8 +34,8 @@ def test_back_underline_from_html():
     merge_html_back_formatting(cards, EXAMPLE_HTML)
     en_de = next(c for c in cards if c["direction"] == "en_de")
     de_en = next(c for c in cards if c["direction"] == "de_en")
-    assert en_de["back_html"] == "<u>beitragen</u>"
-    assert de_en["back_html"] == "<u>contribute</u> more"
+    assert en_de["back_html"] == "<strong>beitragen</strong>"
+    assert de_en["back_html"] == "<strong>contribute</strong> more"
 
 
 if __name__ == "__main__":
