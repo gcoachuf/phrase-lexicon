@@ -69,8 +69,10 @@
     </div>
 
     <footer class="footer">
-      <button id="btn-reset-progress" class="reset-link" type="button">Reset training progress…</button>
-      <button id="btn-reset-dict" class="reset-link" type="button">Reset phrase dictionary…</button>
+      <div class="footer-actions">
+        <button id="btn-reset-progress" class="sync-btn" type="button">Reset</button>
+        <button id="btn-reset-dict" class="sync-btn" type="button">Delete</button>
+      </div>
       <p class="build-id">Build {{ build_id }}</p>
       <p id="sync-status" class="sync-status">Sync adds new phrases only — your progress is kept.</p>
     </footer>
