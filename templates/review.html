@@ -57,7 +57,7 @@
 
     <div id="empty-state" class="empty-state hidden">
       <p id="empty-title">Gerade keine Karten fällig.</p>
-      <p class="hint" id="empty-hint">Klicke auf <strong>Sync from Google Doc</strong>, um Phrasen zu importieren.</p>
+      <p class="hint" id="empty-hint">Klicke auf <strong>Sync from Doc</strong>, um Phrasen zu importieren.</p>
     </div>
 
     <div id="loading-state" class="loading-state">
@@ -478,7 +478,7 @@
           } else {
             showEmptyState(
               "Gerade keine Karten fällig.",
-              "Klicke auf <strong>Sync from Google Doc</strong>, um Phrasen zu importieren, oder komm später wieder."
+              "Klicke auf <strong>Sync from Doc</strong>, um Phrasen zu importieren, oder komm später wieder."
             );
           }
           return;
@@ -534,7 +534,7 @@
         showMessage(err.message, "error");
       } finally {
         btn.disabled = false;
-        btn.textContent = "Sync from Google Doc";
+        btn.textContent = "Sync from Doc";
       }
     }
 
