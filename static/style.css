@@ -78,6 +78,11 @@ header h1 {
   color: var(--accent);
 }
 
+.dir-btn:disabled {
+  opacity: 0.35;
+  cursor: not-allowed;
+}
+
 .sync-btn {
   border: 1px solid var(--border);
   background: var(--surface);
@@ -209,6 +214,29 @@ header h1 {
   white-space: pre-wrap;
 }
 
+.visual-hint {
+  margin-top: 1.25rem;
+  padding-top: 1rem;
+  border-top: 1px solid var(--border);
+}
+
+.visual-hint img {
+  display: block;
+  max-width: 100%;
+  max-height: 240px;
+  margin: 0 auto;
+  border-radius: 10px;
+  object-fit: contain;
+}
+
+.visual-hint-text {
+  margin: 0;
+  color: var(--muted);
+  font-size: 0.95rem;
+  line-height: 1.5;
+  font-weight: 400;
+}
+
 .cloze-input {
   display: inline-block;
   min-width: 6rem;
@@ -246,7 +274,7 @@ header h1 {
 }
 
 .card-back.incorrect {
-  color: var(--danger);
+  color: var(--accent);
 }
 
 .card-back .your-answer {

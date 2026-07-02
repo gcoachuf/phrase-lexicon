@@ -15,9 +15,11 @@ ENGLISH_LINE = re.compile(
     re.I,
 )
 
-CLOZE_SECTION = re.compile(
-    r"^(EN_DE|DE_EN)\s*\nFront:\s*(.+?)\s*\nBack:\s*(.+?)(?=\n\s*\n|\n(?:EN_DE|DE_EN)\s*\n|\Z)",
-    re.MULTILINE | re.DOTALL,
+IMAGE_URL_RE = re.compile(
+    r"https?://[^\s<>\"']+"
+    r"(?:\.(?:png|jpe?g|gif|webp|svg)(?:\?[^\s<>\"']*)?"
+    r"|(?:docs\.google\.com|googleusercontent\.com|ggpht\.com)[^\s<>\"']*)",
+    re.IGNORECASE,
 )
 
 
@@ -34,12 +36,34 @@ def normalize_card(card: dict) -> dict:
     direction = card["direction"].strip().lower()
     if direction not in ("en_de", "de_en"):
         direction = "en_de"
+    visual_hint = normalize_text(card.get("visual_hint", ""))
+    hint_value, hint_type = classify_visual_hint(visual_hint)
     return {
         **card,
         "direction": direction,
         "front": normalize_text(card["front"]),
         "back": normalize_text(card["back"]),
+        "visual_hint": hint_value,
+        "visual_hint_type": hint_type,
     }
+
+
+def classify_visual_hint(text: str) -> tuple[str, str]:
+    text = normalize_text(text) if text else ""
+    if not text:
+        return "", "none"
+
+    image_match = IMAGE_URL_RE.search(text)
+    if image_match:
+        return image_match.group(0).rstrip(".,;)"), "image"
+
+    url_match = re.search(r"https?://\S+", text)
+    if url_match:
+        url = url_match.group(0).rstrip(".,;)")
+        if re.search(r"\.(png|jpe?g|gif|webp|svg)(\?|$)", url, re.I):
+            return url, "image"
+
+    return text, "text"
 
 
 def card_identity(card: dict) -> tuple[str, str, str]:
@@ -52,18 +76,54 @@ def _group_key(en_de_front: str, de_en_front: str) -> str:
     return hashlib.sha1(raw).hexdigest()[:16]
 
 
+def _parse_direction_content(content: str) -> dict[str, str]:
+    front = ""
+    back = ""
+    visual_lines: list[str] = []
+    in_visual = False
+
+    for line in content.splitlines():
+        stripped = line.strip()
+        if not stripped:
+            if in_visual:
+                in_visual = False
+            continue
+
+        if re.match(r"^Front:\s*", stripped, re.I):
+            in_visual = False
+            front = re.sub(r"^Front:\s*", "", stripped, flags=re.I)
+        elif re.match(r"^Back:\s*", stripped, re.I):
+            in_visual = False
+            back = re.sub(r"^Back:\s*", "", stripped, flags=re.I)
+        elif re.match(r"^Note:\s*", stripped, re.I):
+            in_visual = False
+        elif re.match(r"^Visual hint:\s*", stripped, re.I):
+            in_visual = True
+            rest = re.sub(r"^Visual hint:\s*", "", stripped, flags=re.I)
+            if rest:
+                visual_lines.append(rest)
+        elif in_visual:
+            visual_lines.append(stripped)
+        elif stripped.upper() in ("EN_DE", "DE_EN"):
+            break
+
+    return {
+        "front": front,
+        "back": back,
+        "visual_hint": normalize_text(" ".join(visual_lines)),
+    }
+
+
 def parse_cloze_block(block: str) -> list[dict]:
     block = block.strip()
-    if not block:
+    if not block or block.startswith("Phrase Lexicon"):
         return []
 
+    parts = re.split(r"^(EN_DE|DE_EN)\s*$", block, flags=re.MULTILINE | re.IGNORECASE)
     sections: dict[str, dict[str, str]] = {}
-    for match in CLOZE_SECTION.finditer(block):
-        direction = match.group(1).lower()
-        sections[direction] = {
-            "front": match.group(2).strip(),
-            "back": match.group(3).strip(),
-        }
+    for index in range(1, len(parts), 2):
+        direction = parts[index].lower()
+        sections[direction] = _parse_direction_content(parts[index + 1])
 
     if not sections:
         return []
@@ -81,6 +141,7 @@ def parse_cloze_block(block: str) -> list[dict]:
                     "direction": direction,
                     "front": payload["front"],
                     "back": payload["back"],
+                    "visual_hint": payload.get("visual_hint", ""),
                     "group_key": group_key,
                     "deck": "phrase_lexicon",
                     "source": "cloze",
@@ -89,17 +150,20 @@ def parse_cloze_block(block: str) -> list[dict]:
     return cards
 
 
-def _card_section(text: str) -> str:
+def _card_section(text: str) -> tuple[str, str]:
     if "Phrase Trainer" in text:
-        return text.split("Phrase Trainer", 1)[1]
+        section = text.split("Phrase Trainer", 1)[1]
+        # Ignore the archived Phrase Lexicon block inside the trainer section.
+        if "Phrase Lexicon" in section:
+            section = section.split("Phrase Lexicon", 1)[0]
+        return section, "phrase_trainer"
     if "Phrase Lexicon" in text:
-        return text.split("Phrase Lexicon", 1)[1]
-    return text
+        return text.split("Phrase Lexicon", 1)[1], "phrase_lexicon"
+    return text, "phrase_lexicon"
 
 
 def parse_cloze_cards(text: str) -> list[dict]:
-    section = _card_section(text)
-    deck = "phrase_trainer" if "Phrase Trainer" in text else "phrase_lexicon"
+    section, deck = _card_section(text)
 
     cards: list[dict] = []
     for block in re.split(r"^---\s*$", section, flags=re.MULTILINE):

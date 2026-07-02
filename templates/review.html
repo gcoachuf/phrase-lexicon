@@ -46,6 +46,7 @@
       <div class="deck-label" id="deck-label"></div>
       <div class="card" id="card">
         <div class="card-front" id="card-front"></div>
+        <div id="visual-hint" class="visual-hint hidden" aria-label="Visual hint"></div>
         <div class="card-back hidden" id="card-back"></div>
         <button id="btn-reveal" class="reveal-btn">Check answer</button>
       </div>
@@ -99,6 +100,7 @@
     let resetMode = "progress";
     let sessionDone = 0;
     let cardsAvailable = {{ stats.due }};
+    let directionCounts = { en_de: 0, de_en: 0 };
 
     const RESET_CONFIG = {
       progress: {
@@ -135,6 +137,7 @@
       loadingState: document.getElementById("loading-state"),
       cardFront: document.getElementById("card-front"),
       cardBack: document.getElementById("card-back"),
+      visualHint: document.getElementById("visual-hint"),
       deckLabel: document.getElementById("deck-label"),
       btnReveal: document.getElementById("btn-reveal"),
       ratingArea: document.getElementById("rating-area"),
@@ -157,11 +160,28 @@
       resetInputLabel: document.getElementById("reset-input-label"),
     };
 
+    function updateDirectionButtons(card = null) {
+      const enBtn = document.getElementById("btn-en-de");
+      const deBtn = document.getElementById("btn-de-en");
+
+      if (card && !card.can_switch_direction) {
+        enBtn.disabled = card.direction !== "en_de";
+        deBtn.disabled = card.direction !== "de_en";
+        return;
+      }
+
+      enBtn.disabled = directionCounts.en_de === 0;
+      deBtn.disabled = directionCounts.de_en === 0;
+    }
+
     function setDirection(next) {
+      const btn = document.querySelector(`.dir-btn[data-direction="${next}"]`);
+      if (btn?.disabled) return;
+
       direction = next;
       sessionDone = 0;
-      document.querySelectorAll(".dir-btn").forEach((btn) => {
-        btn.classList.toggle("active", btn.dataset.direction === direction);
+      document.querySelectorAll(".dir-btn").forEach((button) => {
+        button.classList.toggle("active", button.dataset.direction === direction);
       });
       updateSessionProgress();
       loadNextCard();
@@ -241,6 +261,8 @@
       els.cardBack.classList.remove("correct", "incorrect");
       els.btnReveal.classList.remove("hidden");
       els.ratingArea.classList.add("hidden");
+      els.visualHint.classList.add("hidden");
+      els.visualHint.innerHTML = "";
     }
 
     function normalizeAnswer(value) {
@@ -298,6 +320,7 @@
           ? `✓ Correct: <strong>${escapeHtml(currentCard.back)}</strong>`
           : `Answer: <strong>${escapeHtml(currentCard.back)}</strong>${userAnswer ? `<span class="your-answer"> (you wrote: ${escapeHtml(input.value.trim())})</span>` : ""}`;
       } else {
+        els.cardBack.classList.remove("correct", "incorrect");
         els.cardBack.textContent = currentCard.back;
       }
 
@@ -314,14 +337,31 @@
         .replace(/"/g, "&quot;");
     }
 
+    function renderVisualHint(card) {
+      if (!card.visual_hint || card.visual_hint_type === "none") {
+        els.visualHint.classList.add("hidden");
+        els.visualHint.innerHTML = "";
+        return;
+      }
+
+      els.visualHint.classList.remove("hidden");
+      if (card.visual_hint_type === "image") {
+        els.visualHint.innerHTML = `<img src="${escapeHtml(card.visual_hint)}" alt="Visual hint">`;
+      } else {
+        els.visualHint.innerHTML = `<p class="visual-hint-text">${escapeHtml(card.visual_hint)}</p>`;
+      }
+    }
+
     function renderCard(card) {
       currentCard = card;
       resetCardUi();
       const dirLabel = card.direction === "de_en" ? "DE → EN" : "EN → DE";
       els.deckLabel.textContent = `${card.deck.replace("_", " ")} · ${dirLabel}`;
       renderCardFront(card.front);
+      renderVisualHint(card);
       els.cardBack.textContent = card.back;
       els.btnReveal.textContent = card.front.includes("_____") ? "Check answer" : "Show answer";
+      updateDirectionButtons(card);
       els.loadingState.classList.add("hidden");
       els.cardArea.classList.remove("hidden");
       els.emptyState.classList.add("hidden");
@@ -329,6 +369,7 @@
 
     async function loadNextCard() {
       if (isSessionComplete()) {
+        updateDirectionButtons();
         showSessionComplete();
         return;
       }
@@ -336,9 +377,13 @@
       const res = await fetch(`/api/next?direction=${direction}`);
       const data = await res.json();
       updateStats(data.stats);
+      if (data.direction_counts) {
+        directionCounts = data.direction_counts;
+      }
       els.loadingState.classList.add("hidden");
 
       if (!data.card) {
+        updateDirectionButtons();
         if (sessionDone > 0) {
           showSessionComplete();
         } else {
@@ -357,6 +402,10 @@
       const data = await res.json();
       if (data.ok) {
         updateStats(data.stats);
+        if (data.direction_counts) {
+          directionCounts = data.direction_counts;
+          updateDirectionButtons(currentCard);
+        }
         const when = formatSyncTime(data.last_sync_at);
         setSyncStatus(`Last sync: ${when} · Sync adds new phrases only — progress is kept`);
       }
@@ -376,9 +425,12 @@
           ? `Added ${data.added} new phrase${data.added === 1 ? "" : "s"}. `
           : "No new phrases. ";
         const skippedMsg = data.skipped_duplicates
-          ? `${data.skipped_duplicates} duplicate${data.skipped_duplicates === 1 ? "" : "s"} skipped. `
+          ? `${data.skipped_duplicates} bereits importiert. `
           : "";
-        setSyncStatus(`${addedMsg}${skippedMsg}Last sync: ${when} · Progress kept`);
+        const progressMsg = data.added > 0 || data.skipped_duplicates
+          ? "Fortschritt bleibt erhalten."
+          : "Sync fügt nur neue Phrasen hinzu — Fortschritt bleibt erhalten.";
+        setSyncStatus(`${addedMsg}${skippedMsg}Last sync: ${when} · ${progressMsg}`);
         showMessage(`${addedMsg}${skippedMsg}(${data.total} cards total)`, "success");
         sessionDone = 0;
         updateSessionProgress();
@@ -467,6 +519,13 @@
         closeResetModal();
         sessionDone = 0;
         updateStats(data.stats);
+        if (data.direction_counts) {
+          directionCounts = data.direction_counts;
+        }
+        if (resetMode === "dict") {
+          setSyncStatus("Wörterbuch geleert. Klicke auf Sync, um Phrasen neu zu laden.");
+          updateDirectionButtons();
+        }
         const count = data.reset ?? data.deleted ?? 0;
         showMessage(cfg.successMessage(count), "success");
         await loadNextCard();

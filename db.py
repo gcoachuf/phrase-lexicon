@@ -4,7 +4,7 @@ import os
 import sqlite3
 from pathlib import Path
 
-from parser import card_identity, normalize_card
+from parser import card_identity, classify_visual_hint, normalize_card
 from scheduler import initial_card_state, today
 
 _data_dir = Path(os.environ.get("DATA_DIR", Path(__file__).parent))
@@ -47,6 +47,10 @@ def _migrate_cards_table(conn: sqlite3.Connection) -> None:
         return
 
     if "direction" in columns and "front" in columns:
+        if "visual_hint" not in columns:
+            conn.execute(
+                "ALTER TABLE cards ADD COLUMN visual_hint TEXT NOT NULL DEFAULT ''"
+            )
         return
 
     conn.execute("DROP TABLE IF EXISTS cards")
@@ -102,6 +106,21 @@ def _remove_duplicate_cards(conn: sqlite3.Connection) -> int:
     return cursor.rowcount
 
 
+SYNC_META_KEYS = (
+    "last_sync_at",
+    "last_sync_added",
+    "last_sync_skipped",
+    "last_sync_parsed",
+)
+
+
+def clear_sync_meta() -> None:
+    init_db()
+    with connect() as conn:
+        for key in SYNC_META_KEYS:
+            conn.execute("DELETE FROM meta WHERE key = ?", (key,))
+
+
 def import_cards(cards: list[dict]) -> tuple[int, int, int]:
     """Insert new cards. Returns (added, skipped, total)."""
     init_db()
@@ -126,9 +145,9 @@ def import_cards(cards: list[dict]) -> tuple[int, int, int]:
             cursor = conn.execute(
                 """
                 INSERT OR IGNORE INTO cards
-                    (direction, front, back, group_key, deck, source,
+                    (direction, front, back, group_key, deck, source, visual_hint,
                      interval, ease, due, reps, lapses)
-                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
                 """,
                 (
                     normalized["direction"],
@@ -137,6 +156,7 @@ def import_cards(cards: list[dict]) -> tuple[int, int, int]:
                     normalized.get("group_key", ""),
                     normalized["deck"],
                     normalized["source"],
+                    normalized.get("visual_hint", ""),
                     state["interval"],
                     state["ease"],
                     state["due"],
@@ -158,9 +178,9 @@ def get_card_by_id(card_id: int) -> dict | None:
     init_db()
     with connect() as conn:
         row = conn.execute("SELECT * FROM cards WHERE id = ?", (card_id,)).fetchone()
-    if not row:
-        return None
-    return _row_to_card(row)
+        if not row:
+            return None
+        return _row_to_card(row, conn)
 
 
 def get_due_card(direction: str) -> dict | None:
@@ -175,9 +195,9 @@ def get_due_card(direction: str) -> dict | None:
             """,
             (today().isoformat(), direction),
         ).fetchone()
-    if not row:
-        return None
-    return _row_to_card(row)
+        if not row:
+            return None
+        return _row_to_card(row, conn)
 
 
 def get_stats(direction: str | None = None) -> dict:
@@ -204,6 +224,18 @@ def get_stats(direction: str | None = None) -> dict:
                 "SELECT COUNT(*) FROM cards WHERE reps = 0"
             ).fetchone()[0]
     return {"total": total, "due": due, "new": new_cards}
+
+
+def get_direction_counts() -> dict[str, int]:
+    init_db()
+    with connect() as conn:
+        rows = conn.execute(
+            "SELECT direction, COUNT(*) AS count FROM cards GROUP BY direction"
+        ).fetchall()
+    counts = {"en_de": 0, "de_en": 0}
+    for row in rows:
+        counts[row["direction"]] = row["count"]
+    return counts
 
 
 def reset_all_progress(direction: str | None = None) -> int:
@@ -250,7 +282,8 @@ def clear_all_cards() -> int:
     with connect() as conn:
         count = conn.execute("SELECT COUNT(*) FROM cards").fetchone()[0]
         conn.execute("DELETE FROM cards")
-        return count
+    clear_sync_meta()
+    return count
 
 
 def update_card(card_id: int, fields: dict) -> None:
@@ -272,7 +305,21 @@ def update_card(card_id: int, fields: dict) -> None:
         )
 
 
-def _row_to_card(row: sqlite3.Row) -> dict:
+def _group_directions(conn: sqlite3.Connection, group_key: str, direction: str) -> list[str]:
+    if not group_key:
+        return [direction]
+    rows = conn.execute(
+        "SELECT DISTINCT direction FROM cards WHERE group_key = ? ORDER BY direction",
+        (group_key,),
+    ).fetchall()
+    paired = [row["direction"] for row in rows]
+    return paired or [direction]
+
+
+def _row_to_card(row: sqlite3.Row, conn: sqlite3.Connection) -> dict:
+    raw_hint = row["visual_hint"] if "visual_hint" in row.keys() else ""
+    hint_value, hint_type = classify_visual_hint(raw_hint)
+    paired_directions = _group_directions(conn, row["group_key"], row["direction"])
     return {
         "id": row["id"],
         "front": row["front"],
@@ -280,6 +327,10 @@ def _row_to_card(row: sqlite3.Row) -> dict:
         "deck": row["deck"],
         "direction": row["direction"],
         "group_key": row["group_key"],
+        "visual_hint": hint_value,
+        "visual_hint_type": hint_type,
+        "paired_directions": paired_directions,
+        "can_switch_direction": len(paired_directions) > 1,
         "interval": row["interval"],
         "ease": row["ease"],
         "due": row["due"],

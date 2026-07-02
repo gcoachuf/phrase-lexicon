@@ -52,9 +52,21 @@ def next_card():
     card = db.get_due_card(direction)
     if not card:
         return jsonify(
-            {"ok": True, "card": None, "stats": db.get_stats(direction)}
+            {
+                "ok": True,
+                "card": None,
+                "stats": db.get_stats(direction),
+                "direction_counts": db.get_direction_counts(),
+            }
         )
-    return jsonify({"ok": True, "card": card, "stats": db.get_stats(direction)})
+    return jsonify(
+        {
+            "ok": True,
+            "card": card,
+            "stats": db.get_stats(direction),
+            "direction_counts": db.get_direction_counts(),
+        }
+    )
 
 
 @app.route("/api/review", methods=["POST"])
@@ -87,6 +99,7 @@ def status():
         {
             "ok": True,
             "stats": db.get_stats(direction),
+            "direction_counts": db.get_direction_counts(),
             "last_sync_at": db.get_meta("last_sync_at"),
         }
     )
@@ -119,7 +132,14 @@ def reset_dict():
         ), 400
 
     count = db.clear_all_cards()
-    return jsonify({"ok": True, "deleted": count, "stats": db.get_stats()})
+    return jsonify(
+        {
+            "ok": True,
+            "deleted": count,
+            "stats": db.get_stats(),
+            "direction_counts": db.get_direction_counts(),
+        }
+    )
 
 
 @app.route("/api/cron/sync")
