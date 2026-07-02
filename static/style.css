@@ -380,14 +380,22 @@ header h1 {
 }
 
 .card-back .answer-text strong {
-  font-weight: 700;
-  color: var(--text);
+  display: inline;
+  font-weight: 600;
+  color: #fff;
+  background: linear-gradient(
+    180deg,
+    rgba(79, 140, 255, 0.72) 0%,
+    rgba(55, 110, 210, 0.85) 100%
+  );
+  border: 1px solid rgba(126, 180, 255, 0.55);
+  border-radius: 6px;
+  padding: 0.1em 0.4em;
+  box-decoration-break: clone;
+  -webkit-box-decoration-break: clone;
 }
 
-.card-back.correct .answer-text strong {
-  color: #d4ffe8;
-}
-
+.card-back.correct .answer-text strong,
 .card-back.incorrect .answer-text strong {
   color: #fff;
 }
