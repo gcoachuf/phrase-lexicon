@@ -8,7 +8,7 @@ import urllib.request
 DOC_ID = os.environ.get(
     "GOOGLE_DOC_ID", "1TX2Qd17AJ9nQ_A3QUtNSNbQ5WEqt4hfFVoaAUD_ifCw"
 )
-DOC_TAB = os.environ.get("GOOGLE_DOC_TAB", "").strip()
+DOC_TAB = os.environ.get("GOOGLE_DOC_TAB", "t.x0jh4b5vn4op").strip()
 
 
 def export_url(doc_id: str = DOC_ID, doc_tab: str = DOC_TAB) -> str:
@@ -177,14 +177,20 @@ def parse_cloze_block(block: str) -> list[dict]:
 
 
 def _card_section(text: str) -> tuple[str, str]:
-    if "Phrase Trainer" in text:
-        section = text.split("Phrase Trainer", 1)[1]
-        # Ignore the archived Phrase Lexicon block inside the trainer section.
-        if "Phrase Lexicon" in section:
-            section = section.split("Phrase Lexicon", 1)[0]
-        return section, "phrase_trainer"
+    for heading in ("Trainer", "Phrase Trainer"):
+        if heading in text:
+            section = text.split(heading, 1)[1]
+            if "Phrase Lexicon" in section:
+                section = section.split("Phrase Lexicon", 1)[0]
+            return section, "trainer"
+
     if "Phrase Lexicon" in text:
         return text.split("Phrase Lexicon", 1)[1], "phrase_lexicon"
+
+    # Dedicated trainer tab export: cloze blocks without a section heading.
+    if re.search(r"^(EN_DE|DE_EN)\s*$", text, re.MULTILINE | re.IGNORECASE):
+        return text, "trainer"
+
     return text, "phrase_lexicon"
 
 
