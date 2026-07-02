@@ -18,14 +18,11 @@
       <h1>Nik's Deutsch Trainer</h1>
     </header>
 
-    <div class="toolbar">
+    <div id="stats" class="stats">
       <div class="direction-toggle" role="group" aria-label="Card direction">
         <button id="btn-de-en" class="dir-btn{% if direction == 'de_en' %} active{% endif %}" data-direction="de_en">DE → EN</button>
         <button id="btn-en-de" class="dir-btn{% if direction == 'en_de' %} active{% endif %}" data-direction="en_de">EN → DE</button>
       </div>
-    </div>
-
-    <div id="stats" class="stats">
       <label class="stat-learn" for="session-goal">
         Lernen
         <input id="session-goal" type="number" min="1" max="999" value="{{ session_goal_default }}">
