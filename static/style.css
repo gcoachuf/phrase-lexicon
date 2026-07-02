@@ -64,7 +64,7 @@ header h1 {
   flex-wrap: wrap;
   gap: 0.5rem;
   align-items: center;
-  justify-content: space-between;
+  justify-content: center;
   margin-bottom: 0.65rem;
 }
 
@@ -132,38 +132,6 @@ header h1 {
   line-height: 1.45;
   text-align: center;
   max-width: 36rem;
-}
-
-.footer-backup {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: 0.35rem;
-  margin-top: 0.15rem;
-}
-
-.backup-link {
-  background: none;
-  border: none;
-  color: var(--muted);
-  font-size: 0.68rem;
-  opacity: 0.75;
-  cursor: pointer;
-  padding: 0.2rem 0.35rem;
-  text-decoration: underline;
-  text-underline-offset: 0.12em;
-}
-
-.backup-link:hover {
-  color: var(--accent-bright);
-  opacity: 1;
-}
-
-.backup-sep {
-  color: var(--muted);
-  opacity: 0.45;
-  font-size: 0.68rem;
-  user-select: none;
 }
 
 .stats {
@@ -585,8 +553,18 @@ header h1 {
   width: 100%;
 }
 
+.footer-actions-secondary {
+  margin-top: -0.15rem;
+}
+
 .footer-actions .sync-btn {
-  min-width: 7rem;
+  min-width: 0;
+  flex: 1 1 auto;
+}
+
+.footer-actions-secondary .sync-btn {
+  flex: 1 1 calc(50% - 0.25rem);
+  max-width: calc(50% - 0.25rem);
 }
 
 .build-id {
@@ -696,8 +674,7 @@ header h1 {
   .toolbar { justify-content: center; margin-bottom: 0.5rem; }
   .direction-toggle { width: 100%; }
   .dir-btn { flex: 1; padding: 0.4rem 0.5rem; font-size: 0.78rem; }
-  .sync-btn { width: 100%; font-size: 0.78rem; }
-  .footer-actions .sync-btn { width: auto; flex: 1; min-width: 0; }
+  .footer-actions .sync-btn { font-size: 0.78rem; min-width: 0; }
   .card { padding: 0.85rem 0.65rem; min-height: 140px; }
   .card-front { font-size: 0.98rem; line-height: 1.5; }
   .cloze-input { min-width: 3.5rem; max-width: 100%; font-size: 0.95rem; }

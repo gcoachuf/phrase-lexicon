@@ -23,8 +23,6 @@
         <button id="btn-de-en" class="dir-btn{% if direction == 'de_en' %} active{% endif %}" data-direction="de_en">DE → EN</button>
         <button id="btn-en-de" class="dir-btn{% if direction == 'en_de' %} active{% endif %}" data-direction="en_de">EN → DE</button>
       </div>
-
-      <button id="btn-sync" class="sync-btn">Sync from Google Doc</button>
     </div>
 
     <div id="stats" class="stats">
@@ -70,17 +68,17 @@
 
     <footer class="footer">
       <div class="footer-actions">
+        <button id="btn-sync" class="sync-btn" type="button">Sync from Doc</button>
+        <button id="btn-export" class="sync-btn" type="button">Export Progress</button>
+        <button id="btn-import" class="sync-btn" type="button">Import Progress</button>
+        <input id="import-file" type="file" accept="application/json,.json" class="hidden">
+      </div>
+      <div class="footer-actions footer-actions-secondary">
         <button id="btn-reset-progress" class="sync-btn" type="button">Reset Progress</button>
-        <button id="btn-reset-dict" class="sync-btn" type="button">Delete Dict</button>
+        <button id="btn-reset-dict" class="sync-btn" type="button">Delete Dictionary</button>
       </div>
       <p class="build-id">Build {{ build_id }}</p>
       <p id="sync-status" class="sync-status">Sync adds new phrases only — your progress is kept.</p>
-      <div class="footer-backup">
-        <button id="btn-export" class="backup-link" type="button">Export</button>
-        <span class="backup-sep" aria-hidden="true">·</span>
-        <button id="btn-import" class="backup-link" type="button">Import</button>
-        <input id="import-file" type="file" accept="application/json,.json" class="hidden">
-      </div>
     </footer>
   </div>
 
