@@ -354,7 +354,7 @@
 
         els.cardBack.classList.toggle("correct", correct);
         els.cardBack.classList.toggle("incorrect", !correct);
-        const statusLabel = correct ? "✓ Correct" : "Answer";
+        const statusLabel = correct ? "✓ Correct" : null;
         els.cardBack.innerHTML = buildAnswerHtml(currentCard, {
           statusLabel,
           userAnswer: userAnswer ? input.value.trim() : null,
