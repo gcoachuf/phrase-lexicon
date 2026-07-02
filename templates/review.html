@@ -64,15 +64,17 @@
     </div>
 
     <footer class="footer">
-      <div class="footer-actions">
-        <button id="btn-sync" class="sync-btn" type="button">Sync from Doc</button>
-        <button id="btn-export" class="sync-btn" type="button">Export Progress</button>
-        <button id="btn-import" class="sync-btn" type="button">Import Progress</button>
-        <input id="import-file" type="file" accept="application/json,.json" class="hidden">
-      </div>
-      <div class="footer-actions footer-actions-secondary">
-        <button id="btn-reset-progress" class="sync-btn" type="button">Reset Progress</button>
-        <button id="btn-reset-dict" class="sync-btn" type="button">Delete Dictionary</button>
+      <div class="footer-toolbar">
+        <div class="footer-actions">
+          <button id="btn-sync" class="sync-btn" type="button">Sync from Doc</button>
+          <button id="btn-export" class="sync-btn" type="button">Export Progress</button>
+          <button id="btn-import" class="sync-btn" type="button">Import Progress</button>
+          <input id="import-file" type="file" accept="application/json,.json" class="hidden">
+        </div>
+        <div class="footer-actions footer-actions-secondary">
+          <button id="btn-reset-progress" class="sync-btn" type="button">Reset Progress</button>
+          <button id="btn-reset-dict" class="sync-btn" type="button">Delete Dictionary</button>
+        </div>
       </div>
       <p class="build-id">Build {{ build_id }}</p>
       <p id="sync-status" class="sync-status">Sync adds new phrases only — your progress is kept.</p>

@@ -544,6 +544,13 @@ header h1 {
   align-items: center;
 }
 
+.footer-toolbar {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  width: 100%;
+}
+
 .footer-actions {
   display: flex;
   flex-wrap: wrap;
@@ -661,6 +668,62 @@ header h1 {
 
 .empty-state .hint {
   font-size: 0.9rem;
+}
+
+@media (min-width: 641px) {
+  .stats {
+    flex-wrap: nowrap;
+    gap: 0.45rem;
+    width: 100%;
+  }
+
+  .stats .direction-toggle {
+    flex: 0 0 auto;
+  }
+
+  .stats > span,
+  .stat-learn {
+    flex: 1 1 0;
+    justify-content: center;
+    min-width: 0;
+    font-size: 0.9rem;
+    padding: 0.38rem 0.7rem;
+  }
+
+  .stats .dir-btn {
+    font-size: 0.86rem;
+    padding: 0.32rem 0.65rem;
+  }
+
+  .stat-learn input {
+    width: 3rem;
+    font-size: 0.95rem;
+  }
+
+  .footer-toolbar {
+    flex-direction: row;
+    flex-wrap: nowrap;
+    justify-content: center;
+    align-items: center;
+    gap: 0.35rem;
+  }
+
+  .footer-actions,
+  .footer-actions-secondary {
+    width: auto;
+    margin-top: 0;
+    flex-wrap: nowrap;
+    gap: 0.35rem;
+  }
+
+  .footer-actions .sync-btn,
+  .footer-actions-secondary .sync-btn {
+    flex: 0 1 auto;
+    max-width: none;
+    padding: 0.3rem 0.5rem;
+    min-height: 30px;
+    font-size: 0.7rem;
+  }
 }
 
 @media (max-width: 640px) {
