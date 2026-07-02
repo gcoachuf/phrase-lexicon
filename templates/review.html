@@ -1,0 +1,345 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+  <meta name="theme-color" content="#4f8cff">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-title" content="Deutsch">
+  <meta name="mobile-web-app-capable" content="yes">
+  <title>Phrase Lexicon Trainer</title>
+  <link rel="manifest" href="/static/manifest.json">
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🇩🇪</text></svg>">
+  <link rel="stylesheet" href="/static/style.css">
+</head>
+<body>
+  <div class="app">
+    <header>
+      <h1>Phrase Lexicon</h1>
+      <p class="subtitle">Deutsch 💪 trainer</p>
+    </header>
+
+    <div class="toolbar">
+      <div class="direction-toggle" role="group" aria-label="Card direction">
+        <button id="btn-en-de" class="dir-btn active" data-direction="en_de">EN → DE</button>
+        <button id="btn-de-en" class="dir-btn" data-direction="de_en">DE → EN</button>
+      </div>
+
+      <button id="btn-sync" class="sync-btn">Sync from Google Doc</button>
+    </div>
+
+    <div id="stats" class="stats">
+      <span><strong id="stat-due">{{ stats.due }}</strong> due</span>
+      <span><strong id="stat-total">{{ stats.total }}</strong> cards</span>
+      <span><strong id="stat-new">{{ stats.new }}</strong> new</span>
+    </div>
+
+    <p id="sync-status" class="sync-status">Sync adds new phrases only — your progress is kept.</p>
+
+    <div id="message" class="message hidden"></div>
+
+    <main id="card-area" class="card-area hidden">
+      <div class="deck-label" id="deck-label"></div>
+      <div class="card" id="card">
+        <div class="card-front" id="card-front"></div>
+        <div class="card-back hidden" id="card-back"></div>
+        <button id="btn-reveal" class="reveal-btn">Show answer</button>
+      </div>
+
+      <div id="rating-area" class="rating-area hidden">
+        <button class="rate-btn again" data-rating="0">Again</button>
+        <button class="rate-btn hard" data-rating="1">Hard</button>
+        <button class="rate-btn good" data-rating="2">Good</button>
+        <button class="rate-btn easy" data-rating="3">Easy</button>
+      </div>
+    </main>
+
+    <div id="empty-state" class="empty-state hidden">
+      <p>No cards due right now.</p>
+      <p class="hint">Click <strong>Sync from Google Doc</strong> to import phrases, or check back later.</p>
+    </div>
+
+    <div id="loading-state" class="loading-state">
+      <p>Loading cards…</p>
+    </div>
+
+    <footer class="footer">
+      <button id="btn-reset-start" class="reset-link" type="button">Reset all training progress…</button>
+    </footer>
+  </div>
+
+  <div id="reset-modal" class="modal hidden" role="dialog" aria-modal="true" aria-labelledby="reset-title">
+    <div class="modal-card">
+      <h2 id="reset-title">Reset training progress?</h2>
+      <p id="reset-step-text" class="modal-text"></p>
+
+      <div id="reset-step-3" class="reset-confirm-input hidden">
+        <label for="reset-input">Type <strong>RESET</strong> to confirm:</label>
+        <input id="reset-input" type="text" autocomplete="off" spellcheck="false">
+      </div>
+
+      <div class="modal-actions">
+        <button id="btn-reset-cancel" class="modal-btn secondary" type="button">Cancel</button>
+        <button id="btn-reset-next" class="modal-btn danger" type="button">Continue</button>
+      </div>
+
+      <p class="modal-step-indicator" id="reset-step-indicator">Step 1 of 3</p>
+    </div>
+  </div>
+
+  <script>
+    let direction = "{{ direction }}";
+    let currentCard = null;
+    let resetStep = 0;
+
+    const RESET_PROMPTS = [
+      "This will erase all review progress (Again/Good/Easy history, due dates). Your phrases stay — only scheduling is cleared. Do you want to continue?",
+      "Are you absolutely sure? Every card will become new again, as if you never studied them.",
+      "Last chance. Type RESET below to permanently clear all training progress.",
+    ];
+
+    const els = {
+      cardArea: document.getElementById("card-area"),
+      emptyState: document.getElementById("empty-state"),
+      loadingState: document.getElementById("loading-state"),
+      cardFront: document.getElementById("card-front"),
+      cardBack: document.getElementById("card-back"),
+      deckLabel: document.getElementById("deck-label"),
+      btnReveal: document.getElementById("btn-reveal"),
+      ratingArea: document.getElementById("rating-area"),
+      message: document.getElementById("message"),
+      syncStatus: document.getElementById("sync-status"),
+      statDue: document.getElementById("stat-due"),
+      statTotal: document.getElementById("stat-total"),
+      statNew: document.getElementById("stat-new"),
+      resetModal: document.getElementById("reset-modal"),
+      resetStepText: document.getElementById("reset-step-text"),
+      resetStep3: document.getElementById("reset-step-3"),
+      resetInput: document.getElementById("reset-input"),
+      resetStepIndicator: document.getElementById("reset-step-indicator"),
+      btnResetNext: document.getElementById("btn-reset-next"),
+    };
+
+    function setDirection(next) {
+      direction = next;
+      document.querySelectorAll(".dir-btn").forEach((btn) => {
+        btn.classList.toggle("active", btn.dataset.direction === direction);
+      });
+      loadNextCard();
+    }
+
+    function updateStats(stats) {
+      els.statDue.textContent = stats.due;
+      els.statTotal.textContent = stats.total;
+      els.statNew.textContent = stats.new;
+    }
+
+    function formatSyncTime(iso) {
+      if (!iso) return "never";
+      const date = new Date(iso);
+      return date.toLocaleString(undefined, {
+        month: "short",
+        day: "numeric",
+        hour: "2-digit",
+        minute: "2-digit",
+      });
+    }
+
+    function setSyncStatus(text) {
+      els.syncStatus.textContent = text;
+    }
+
+    function showMessage(text, type = "info") {
+      els.message.textContent = text;
+      els.message.className = `message ${type}`;
+      els.message.classList.remove("hidden");
+      setTimeout(() => els.message.classList.add("hidden"), 5000);
+    }
+
+    function resetCardUi() {
+      els.cardBack.classList.add("hidden");
+      els.btnReveal.classList.remove("hidden");
+      els.ratingArea.classList.add("hidden");
+    }
+
+    function renderCard(card) {
+      currentCard = card;
+      resetCardUi();
+      els.deckLabel.textContent = card.deck.replace("_", " ");
+      els.cardFront.textContent = card.front;
+      els.cardBack.textContent = card.back;
+      els.loadingState.classList.add("hidden");
+      els.cardArea.classList.remove("hidden");
+      els.emptyState.classList.add("hidden");
+    }
+
+    async function loadNextCard() {
+      const res = await fetch(`/api/next?direction=${direction}`);
+      const data = await res.json();
+      updateStats(data.stats);
+      els.loadingState.classList.add("hidden");
+
+      if (!data.card) {
+        currentCard = null;
+        els.cardArea.classList.add("hidden");
+        els.emptyState.classList.remove("hidden");
+        return;
+      }
+      renderCard(data.card);
+    }
+
+    async function refreshStatus() {
+      const res = await fetch("/api/status");
+      const data = await res.json();
+      if (data.ok) {
+        updateStats(data.stats);
+        const when = formatSyncTime(data.last_sync_at);
+        setSyncStatus(`Last sync: ${when} · Sync adds new phrases only — progress is kept`);
+      }
+    }
+
+    async function syncDoc() {
+      const btn = document.getElementById("btn-sync");
+      btn.disabled = true;
+      btn.textContent = "Syncing…";
+      try {
+        const res = await fetch("/api/sync", { method: "POST" });
+        const data = await res.json();
+        if (!data.ok) throw new Error(data.error || "Sync failed");
+        updateStats(data.stats);
+        const when = formatSyncTime(data.last_sync_at);
+        const addedMsg = data.added > 0
+          ? `Added ${data.added} new phrase${data.added === 1 ? "" : "s"}. `
+          : "No new phrases. ";
+        setSyncStatus(`${addedMsg}Last sync: ${when} · Progress kept`);
+        showMessage(`${addedMsg}(${data.total} cards total)`, "success");
+        await loadNextCard();
+      } catch (err) {
+        showMessage(err.message, "error");
+      } finally {
+        btn.disabled = false;
+        btn.textContent = "Sync from Google Doc";
+      }
+    }
+
+    async function submitReview(rating) {
+      if (!currentCard) return;
+      const res = await fetch("/api/review", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ id: currentCard.id, rating, direction }),
+      });
+      const data = await res.json();
+      if (!data.ok) {
+        showMessage(data.error || "Review failed", "error");
+        return;
+      }
+      await loadNextCard();
+    }
+
+    function openResetModal() {
+      resetStep = 1;
+      els.resetInput.value = "";
+      els.resetStep3.classList.add("hidden");
+      els.resetStepText.textContent = RESET_PROMPTS[0];
+      els.resetStepIndicator.textContent = "Step 1 of 3";
+      els.btnResetNext.textContent = "Yes, continue";
+      els.resetModal.classList.remove("hidden");
+    }
+
+    function closeResetModal() {
+      resetStep = 0;
+      els.resetModal.classList.add("hidden");
+      els.resetInput.value = "";
+    }
+
+    function advanceResetStep() {
+      if (resetStep < 3) {
+        resetStep += 1;
+        els.resetStepText.textContent = RESET_PROMPTS[resetStep - 1];
+        els.resetStepIndicator.textContent = `Step ${resetStep} of 3`;
+        if (resetStep === 3) {
+          els.resetStep3.classList.remove("hidden");
+          els.btnResetNext.textContent = "Reset all progress";
+          els.resetInput.focus();
+        } else {
+          els.resetStep3.classList.add("hidden");
+          els.btnResetNext.textContent = resetStep === 2 ? "Yes, I'm sure" : "Continue";
+        }
+        return;
+      }
+
+      if (els.resetInput.value.trim() !== "RESET") {
+        showMessage('Type RESET exactly to confirm.', "error");
+        els.resetInput.focus();
+        return;
+      }
+      performReset();
+    }
+
+    async function performReset() {
+      els.btnResetNext.disabled = true;
+      try {
+        const res = await fetch("/api/reset-progress", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ confirmation: "RESET" }),
+        });
+        const data = await res.json();
+        if (!data.ok) throw new Error(data.error || "Reset failed");
+        closeResetModal();
+        updateStats(data.stats);
+        showMessage(`Training progress reset for ${data.reset} cards.`, "success");
+        await loadNextCard();
+      } catch (err) {
+        showMessage(err.message, "error");
+      } finally {
+        els.btnResetNext.disabled = false;
+      }
+    }
+
+    document.getElementById("btn-en-de").addEventListener("click", () => setDirection("en_de"));
+    document.getElementById("btn-de-en").addEventListener("click", () => setDirection("de_en"));
+    document.getElementById("btn-sync").addEventListener("click", syncDoc);
+    document.getElementById("btn-reset-start").addEventListener("click", openResetModal);
+    document.getElementById("btn-reset-cancel").addEventListener("click", closeResetModal);
+    els.btnResetNext.addEventListener("click", advanceResetStep);
+    els.resetModal.addEventListener("click", (e) => {
+      if (e.target === els.resetModal) closeResetModal();
+    });
+    els.resetInput.addEventListener("keydown", (e) => {
+      if (e.key === "Enter") advanceResetStep();
+    });
+
+    els.btnReveal.addEventListener("click", () => {
+      els.cardBack.classList.remove("hidden");
+      els.btnReveal.classList.add("hidden");
+      els.ratingArea.classList.remove("hidden");
+    });
+    document.querySelectorAll(".rate-btn").forEach((btn) => {
+      btn.addEventListener("click", () => submitReview(Number(btn.dataset.rating)));
+    });
+
+    document.addEventListener("keydown", (e) => {
+      if (e.target.tagName === "INPUT" || e.target.tagName === "TEXTAREA") return;
+      if (e.code === "Space" && els.cardBack.classList.contains("hidden")) {
+        e.preventDefault();
+        els.btnReveal.click();
+      }
+      if (!els.ratingArea.classList.contains("hidden")) {
+        if (e.key === "1") submitReview(0);
+        if (e.key === "2") submitReview(1);
+        if (e.key === "3") submitReview(2);
+        if (e.key === "4") submitReview(3);
+      }
+    });
+
+    async function init() {
+      setDirection(direction);
+      await refreshStatus();
+    }
+
+    init();
+  </script>
+</body>
+</html>

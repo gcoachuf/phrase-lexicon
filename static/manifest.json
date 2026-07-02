@@ -1,0 +1,10 @@
+{
+  "name": "Deutsch Phrase Trainer",
+  "short_name": "Deutsch",
+  "description": "Phrase lexicon trainer synced from Google Doc",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#0f1419",
+  "theme_color": "#4f8cff",
+  "orientation": "portrait-primary"
+}

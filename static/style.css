@@ -1,0 +1,360 @@
+:root {
+  --bg: #0f1419;
+  --surface: #1a2332;
+  --border: #2d3a4d;
+  --text: #e8edf4;
+  --muted: #8b9cb3;
+  --accent: #4f8cff;
+  --accent-soft: #1e3a66;
+  --success: #3ecf8e;
+  --danger: #ff6b6b;
+  --warning: #f0b429;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  min-height: 100vh;
+  min-height: 100dvh;
+  font-family: "Segoe UI", system-ui, -apple-system, sans-serif;
+  background: radial-gradient(circle at top, #1a2740 0%, var(--bg) 55%);
+  color: var(--text);
+  -webkit-tap-highlight-color: transparent;
+  touch-action: manipulation;
+}
+
+.app {
+  max-width: 640px;
+  margin: 0 auto;
+  padding: max(1rem, env(safe-area-inset-top)) 1rem max(2rem, env(safe-area-inset-bottom));
+}
+
+header h1 {
+  margin: 0;
+  font-size: 1.75rem;
+  font-weight: 700;
+}
+
+.subtitle {
+  margin: 0.25rem 0 1.5rem;
+  color: var(--muted);
+}
+
+.toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.75rem;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 1rem;
+}
+
+.direction-toggle {
+  display: inline-flex;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  padding: 3px;
+}
+
+.dir-btn {
+  border: none;
+  background: transparent;
+  color: var(--muted);
+  padding: 0.65rem 1rem;
+  min-height: 44px;
+  border-radius: 8px;
+  cursor: pointer;
+  font-weight: 600;
+  font-size: 0.9rem;
+  transition: background 0.15s, color 0.15s;
+}
+
+.dir-btn.active {
+  background: var(--accent-soft);
+  color: var(--accent);
+}
+
+.sync-btn {
+  border: 1px solid var(--border);
+  background: var(--surface);
+  color: var(--text);
+  padding: 0.55rem 1rem;
+  min-height: 44px;
+  border-radius: 10px;
+  cursor: pointer;
+  font-size: 0.9rem;
+}
+
+.sync-btn:hover:not(:disabled) {
+  border-color: var(--accent);
+}
+
+.sync-btn:disabled {
+  opacity: 0.6;
+  cursor: wait;
+}
+
+.sync-status {
+  color: var(--muted);
+  font-size: 0.8rem;
+  margin: 0 0 1rem;
+}
+
+.stats {
+  display: flex;
+  gap: 1.25rem;
+  color: var(--muted);
+  font-size: 0.9rem;
+  margin-bottom: 1.25rem;
+}
+
+.stats strong {
+  color: var(--text);
+}
+
+.message {
+  padding: 0.75rem 1rem;
+  border-radius: 10px;
+  margin-bottom: 1rem;
+  font-size: 0.9rem;
+}
+
+.message.success {
+  background: rgba(62, 207, 142, 0.12);
+  border: 1px solid rgba(62, 207, 142, 0.35);
+  color: var(--success);
+}
+
+.message.error {
+  background: rgba(255, 107, 107, 0.12);
+  border: 1px solid rgba(255, 107, 107, 0.35);
+  color: var(--danger);
+}
+
+.message.info {
+  background: rgba(79, 140, 255, 0.12);
+  border: 1px solid rgba(79, 140, 255, 0.35);
+  color: var(--accent);
+}
+
+.hidden {
+  display: none !important;
+}
+
+.card-area {
+  margin-top: 0.5rem;
+}
+
+.deck-label {
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  font-size: 0.75rem;
+  color: var(--muted);
+  margin-bottom: 0.75rem;
+}
+
+.card {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 16px;
+  padding: 2rem 1.5rem;
+  min-height: 220px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  box-shadow: 0 12px 40px rgba(0, 0, 0, 0.25);
+}
+
+.card-front {
+  font-size: 1.5rem;
+  line-height: 1.4;
+  font-weight: 600;
+}
+
+.card-back {
+  margin-top: 1.25rem;
+  padding-top: 1.25rem;
+  border-top: 1px solid var(--border);
+  font-size: 1.35rem;
+  line-height: 1.4;
+  color: var(--accent);
+  width: 100%;
+}
+
+.reveal-btn {
+  margin-top: 1.5rem;
+  background: var(--accent);
+  color: white;
+  border: none;
+  border-radius: 12px;
+  padding: 0.9rem 1.6rem;
+  min-height: 48px;
+  width: min(100%, 280px);
+  font-size: 1rem;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.rating-area {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 0.5rem;
+  margin-top: 1rem;
+}
+
+.rate-btn {
+  border: none;
+  border-radius: 12px;
+  padding: 1rem 0.5rem;
+  min-height: 52px;
+  font-weight: 600;
+  font-size: 0.95rem;
+  cursor: pointer;
+  color: #111;
+}
+
+.rate-btn.again { background: #ff8a8a; }
+.rate-btn.hard { background: #f0b429; }
+.rate-btn.good { background: #7dd3a0; }
+.rate-btn.easy { background: #6ec1ff; }
+
+.empty-state {
+  text-align: center;
+  padding: 3rem 1rem;
+  color: var(--muted);
+}
+
+.loading-state {
+  text-align: center;
+  padding: 3rem 1rem;
+  color: var(--muted);
+}
+
+.footer {
+  margin-top: 2.5rem;
+  text-align: center;
+}
+
+.reset-link {
+  background: none;
+  border: none;
+  color: var(--muted);
+  font-size: 0.8rem;
+  text-decoration: underline;
+  cursor: pointer;
+  padding: 0.5rem;
+}
+
+.reset-link:hover {
+  color: var(--danger);
+}
+
+.modal {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.65);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 1rem;
+  z-index: 100;
+}
+
+.modal-card {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 16px;
+  padding: 1.5rem;
+  max-width: 420px;
+  width: 100%;
+  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.4);
+}
+
+.modal-card h2 {
+  margin: 0 0 0.75rem;
+  font-size: 1.2rem;
+}
+
+.modal-text {
+  color: var(--text);
+  line-height: 1.5;
+  margin: 0 0 1rem;
+}
+
+.reset-confirm-input {
+  margin-bottom: 1rem;
+}
+
+.reset-confirm-input label {
+  display: block;
+  font-size: 0.9rem;
+  margin-bottom: 0.5rem;
+  color: var(--muted);
+}
+
+.reset-confirm-input input {
+  width: 100%;
+  padding: 0.75rem;
+  border-radius: 8px;
+  border: 1px solid var(--border);
+  background: var(--bg);
+  color: var(--text);
+  font-size: 1rem;
+}
+
+.modal-actions {
+  display: flex;
+  gap: 0.5rem;
+  justify-content: flex-end;
+}
+
+.modal-btn {
+  border: none;
+  border-radius: 10px;
+  padding: 0.7rem 1rem;
+  min-height: 44px;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.modal-btn.secondary {
+  background: transparent;
+  color: var(--muted);
+  border: 1px solid var(--border);
+}
+
+.modal-btn.danger {
+  background: var(--danger);
+  color: white;
+}
+
+.modal-step-indicator {
+  margin: 1rem 0 0;
+  font-size: 0.75rem;
+  color: var(--muted);
+  text-align: center;
+}
+
+.empty-state .hint {
+  font-size: 0.9rem;
+}
+
+@media (max-width: 480px) {
+  header h1 { font-size: 1.5rem; }
+  .toolbar { justify-content: center; }
+  .direction-toggle { width: 100%; }
+  .dir-btn { flex: 1; }
+  .sync-btn { width: 100%; }
+  .card { padding: 1.5rem 1rem; min-height: 200px; }
+  .card-front { font-size: 1.3rem; }
+  .card-back { font-size: 1.2rem; }
+  .rating-area { grid-template-columns: repeat(2, 1fr); gap: 0.65rem; }
+  .rate-btn { min-height: 56px; font-size: 1rem; }
+  .stats { flex-wrap: wrap; gap: 0.75rem 1.25rem; }
+}
