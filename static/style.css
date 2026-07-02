@@ -172,19 +172,29 @@ header h1 {
 }
 
 .card-front {
-  font-size: 1.5rem;
-  line-height: 1.4;
+  font-size: 1.35rem;
+  line-height: 1.5;
   font-weight: 600;
+  white-space: pre-wrap;
+}
+
+.card-front .blank,
+.card-back .blank {
+  display: inline-block;
+  min-width: 4rem;
+  border-bottom: 2px solid var(--accent);
+  color: var(--accent);
 }
 
 .card-back {
   margin-top: 1.25rem;
   padding-top: 1.25rem;
   border-top: 1px solid var(--border);
-  font-size: 1.35rem;
+  font-size: 1.5rem;
   line-height: 1.4;
   color: var(--accent);
   width: 100%;
+  font-weight: 700;
 }
 
 .reveal-btn {

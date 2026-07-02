@@ -21,8 +21,10 @@ def _sync_response(force: bool = False) -> dict:
 @app.route("/")
 def index():
     db.init_db()
-    stats = db.get_stats()
     direction = request.args.get("direction", "en_de")
+    if direction not in ("en_de", "de_en"):
+        direction = "en_de"
+    stats = db.get_stats(direction)
     return render_template("review.html", stats=stats, direction=direction)
 
 
@@ -49,8 +51,10 @@ def next_card():
         direction = "en_de"
     card = db.get_due_card(direction)
     if not card:
-        return jsonify({"ok": True, "card": None, "stats": db.get_stats()})
-    return jsonify({"ok": True, "card": card, "stats": db.get_stats()})
+        return jsonify(
+            {"ok": True, "card": None, "stats": db.get_stats(direction)}
+        )
+    return jsonify({"ok": True, "card": card, "stats": db.get_stats(direction)})
 
 
 @app.route("/api/review", methods=["POST"])
@@ -63,21 +67,26 @@ def review():
     if card_id is None or rating not in (0, 1, 2, 3):
         return jsonify({"ok": False, "error": "Invalid review payload"}), 400
 
-    card = db.get_card_by_id(card_id, direction)
+    card = db.get_card_by_id(card_id)
     if not card:
         return jsonify({"ok": False, "error": "Card not found"}), 404
+    if card["direction"] != direction:
+        return jsonify({"ok": False, "error": "Card direction mismatch"}), 400
 
     updated = review_card(card, rating)
     db.update_card(card_id, updated)
-    return jsonify({"ok": True, "stats": db.get_stats()})
+    return jsonify({"ok": True, "stats": db.get_stats(direction)})
 
 
 @app.route("/api/status")
 def status():
+    direction = request.args.get("direction", "en_de")
+    if direction not in ("en_de", "de_en"):
+        direction = "en_de"
     return jsonify(
         {
             "ok": True,
-            "stats": db.get_stats(),
+            "stats": db.get_stats(direction),
             "last_sync_at": db.get_meta("last_sync_at"),
         }
     )

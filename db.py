@@ -10,6 +10,24 @@ _data_dir = Path(os.environ.get("DATA_DIR", Path(__file__).parent))
 _data_dir.mkdir(parents=True, exist_ok=True)
 DB_PATH = _data_dir / "cards.db"
 
+CARDS_SCHEMA = """
+CREATE TABLE IF NOT EXISTS cards (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    direction TEXT NOT NULL,
+    front TEXT NOT NULL,
+    back TEXT NOT NULL,
+    group_key TEXT NOT NULL DEFAULT '',
+    deck TEXT NOT NULL,
+    source TEXT NOT NULL,
+    interval INTEGER NOT NULL DEFAULT 0,
+    ease REAL NOT NULL DEFAULT 2.5,
+    due TEXT NOT NULL,
+    reps INTEGER NOT NULL DEFAULT 0,
+    lapses INTEGER NOT NULL DEFAULT 0,
+    UNIQUE(direction, front, back)
+)
+"""
+
 
 def connect() -> sqlite3.Connection:
     conn = sqlite3.connect(DB_PATH)
@@ -17,25 +35,26 @@ def connect() -> sqlite3.Connection:
     return conn
 
 
+def _table_columns(conn: sqlite3.Connection, table: str) -> set[str]:
+    return {row[1] for row in conn.execute(f"PRAGMA table_info({table})")}
+
+
+def _migrate_cards_table(conn: sqlite3.Connection) -> None:
+    columns = _table_columns(conn, "cards")
+    if not columns:
+        conn.execute(CARDS_SCHEMA)
+        return
+
+    if "direction" in columns and "front" in columns:
+        return
+
+    conn.execute("DROP TABLE IF EXISTS cards")
+    conn.execute(CARDS_SCHEMA)
+
+
 def init_db() -> None:
     with connect() as conn:
-        conn.execute(
-            """
-            CREATE TABLE IF NOT EXISTS cards (
-                id INTEGER PRIMARY KEY AUTOINCREMENT,
-                english TEXT NOT NULL,
-                german TEXT NOT NULL,
-                deck TEXT NOT NULL,
-                source TEXT NOT NULL,
-                interval INTEGER NOT NULL DEFAULT 0,
-                ease REAL NOT NULL DEFAULT 2.5,
-                due TEXT NOT NULL,
-                reps INTEGER NOT NULL DEFAULT 0,
-                lapses INTEGER NOT NULL DEFAULT 0,
-                UNIQUE(english, german, deck)
-            )
-            """
-        )
+        _migrate_cards_table(conn)
         conn.execute(
             """
             CREATE TABLE IF NOT EXISTS meta (
@@ -72,12 +91,15 @@ def import_cards(cards: list[dict]) -> tuple[int, int]:
             cursor = conn.execute(
                 """
                 INSERT OR IGNORE INTO cards
-                    (english, german, deck, source, interval, ease, due, reps, lapses)
-                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+                    (direction, front, back, group_key, deck, source,
+                     interval, ease, due, reps, lapses)
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
                 """,
                 (
-                    card["english"],
-                    card["german"],
+                    card["direction"],
+                    card["front"],
+                    card["back"],
+                    card.get("group_key", ""),
                     card["deck"],
                     card["source"],
                     state["interval"],
@@ -93,13 +115,13 @@ def import_cards(cards: list[dict]) -> tuple[int, int]:
     return added, total
 
 
-def get_card_by_id(card_id: int, direction: str) -> dict | None:
+def get_card_by_id(card_id: int) -> dict | None:
     init_db()
     with connect() as conn:
         row = conn.execute("SELECT * FROM cards WHERE id = ?", (card_id,)).fetchone()
     if not row:
         return None
-    return _row_to_card(row, direction)
+    return _row_to_card(row)
 
 
 def get_due_card(direction: str) -> dict | None:
@@ -108,48 +130,78 @@ def get_due_card(direction: str) -> dict | None:
         row = conn.execute(
             """
             SELECT * FROM cards
-            WHERE due <= ?
+            WHERE due <= ? AND direction = ?
             ORDER BY due ASC, reps ASC, id ASC
             LIMIT 1
             """,
-            (today().isoformat(),),
+            (today().isoformat(), direction),
         ).fetchone()
     if not row:
         return None
-    return _row_to_card(row, direction)
+    return _row_to_card(row)
 
 
-def get_stats() -> dict:
+def get_stats(direction: str | None = None) -> dict:
     init_db()
     with connect() as conn:
-        total = conn.execute("SELECT COUNT(*) FROM cards").fetchone()[0]
-        due = conn.execute(
-            "SELECT COUNT(*) FROM cards WHERE due <= ?", (today().isoformat(),)
-        ).fetchone()[0]
-        new_today = conn.execute(
-            "SELECT COUNT(*) FROM cards WHERE reps = 0"
-        ).fetchone()[0]
-    return {"total": total, "due": due, "new": new_today}
+        if direction:
+            total = conn.execute(
+                "SELECT COUNT(*) FROM cards WHERE direction = ?", (direction,)
+            ).fetchone()[0]
+            due = conn.execute(
+                "SELECT COUNT(*) FROM cards WHERE due <= ? AND direction = ?",
+                (today().isoformat(), direction),
+            ).fetchone()[0]
+            new_cards = conn.execute(
+                "SELECT COUNT(*) FROM cards WHERE reps = 0 AND direction = ?",
+                (direction,),
+            ).fetchone()[0]
+        else:
+            total = conn.execute("SELECT COUNT(*) FROM cards").fetchone()[0]
+            due = conn.execute(
+                "SELECT COUNT(*) FROM cards WHERE due <= ?", (today().isoformat(),)
+            ).fetchone()[0]
+            new_cards = conn.execute(
+                "SELECT COUNT(*) FROM cards WHERE reps = 0"
+            ).fetchone()[0]
+    return {"total": total, "due": due, "new": new_cards}
 
 
-def reset_all_progress() -> int:
-    """Reset scheduling on all cards. Returns number of cards affected."""
+def reset_all_progress(direction: str | None = None) -> int:
+    """Reset scheduling on cards. Returns number of cards affected."""
     init_db()
     state = initial_card_state()
     with connect() as conn:
-        cursor = conn.execute(
-            """
-            UPDATE cards
-            SET interval = ?, ease = ?, due = ?, reps = ?, lapses = ?
-            """,
-            (
-                state["interval"],
-                state["ease"],
-                state["due"],
-                state["reps"],
-                state["lapses"],
-            ),
-        )
+        if direction:
+            cursor = conn.execute(
+                """
+                UPDATE cards
+                SET interval = ?, ease = ?, due = ?, reps = ?, lapses = ?
+                WHERE direction = ?
+                """,
+                (
+                    state["interval"],
+                    state["ease"],
+                    state["due"],
+                    state["reps"],
+                    state["lapses"],
+                    direction,
+                ),
+            )
+        else:
+            cursor = conn.execute(
+                """
+                UPDATE cards
+                SET interval = ?, ease = ?, due = ?, reps = ?, lapses = ?
+                """,
+                (
+                    state["interval"],
+                    state["ease"],
+                    state["due"],
+                    state["reps"],
+                    state["lapses"],
+                ),
+            )
         return cursor.rowcount
 
 
@@ -181,20 +233,14 @@ def update_card(card_id: int, fields: dict) -> None:
         )
 
 
-def _row_to_card(row: sqlite3.Row, direction: str) -> dict:
-    english = row["english"]
-    german = row["german"]
-    if direction == "de_en":
-        front, back = german, english
-    else:
-        front, back = english, german
-
+def _row_to_card(row: sqlite3.Row) -> dict:
     return {
         "id": row["id"],
-        "front": front,
-        "back": back,
+        "front": row["front"],
+        "back": row["back"],
         "deck": row["deck"],
-        "direction": direction,
+        "direction": row["direction"],
+        "group_key": row["group_key"],
         "interval": row["interval"],
         "ease": row["ease"],
         "due": row["due"],

@@ -189,11 +189,23 @@
       els.ratingArea.classList.add("hidden");
     }
 
+    function formatCardText(text) {
+      const parts = text.split("_____");
+      if (parts.length === 1) return text;
+      return parts
+        .map((part, index) => {
+          if (index === parts.length - 1) return part;
+          return `${part}<span class="blank">_____</span>`;
+        })
+        .join("");
+    }
+
     function renderCard(card) {
       currentCard = card;
       resetCardUi();
-      els.deckLabel.textContent = card.deck.replace("_", " ");
-      els.cardFront.textContent = card.front;
+      const dirLabel = card.direction === "de_en" ? "DE → EN" : "EN → DE";
+      els.deckLabel.textContent = `${card.deck.replace("_", " ")} · ${dirLabel}`;
+      els.cardFront.innerHTML = formatCardText(card.front);
       els.cardBack.textContent = card.back;
       els.loadingState.classList.add("hidden");
       els.cardArea.classList.remove("hidden");
@@ -216,7 +228,7 @@
     }
 
     async function refreshStatus() {
-      const res = await fetch("/api/status");
+      const res = await fetch(`/api/status?direction=${direction}`);
       const data = await res.json();
       if (data.ok) {
         updateStats(data.stats);
