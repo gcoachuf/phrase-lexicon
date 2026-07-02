@@ -178,7 +178,7 @@ header h1 {
   border-color: var(--border-soft);
 }
 
-.stat-available {
+.stat-studied {
   font-size: 0.85rem;
 }
 
@@ -250,6 +250,15 @@ header h1 {
   line-height: 1.55;
   font-weight: 400;
   white-space: pre-wrap;
+}
+
+.card-practice-label {
+  margin: 0.45rem 0 0;
+  font-size: 0.72rem;
+  font-weight: 600;
+  letter-spacing: 0.02em;
+  text-transform: uppercase;
+  color: var(--warning);
 }
 
 .hint-area {
@@ -672,57 +681,70 @@ header h1 {
 
 @media (min-width: 641px) {
   .stats {
-    flex-wrap: nowrap;
-    gap: 0.45rem;
+    display: grid;
+    grid-template-columns: auto auto auto minmax(0, 1fr) minmax(0, 1fr) minmax(0, 1fr);
+    gap: 0.4rem;
     width: 100%;
-  }
-
-  .stats .direction-toggle {
-    flex: 0 0 auto;
+    align-items: center;
   }
 
   .stats > span,
   .stat-learn {
-    flex: 1 1 0;
     justify-content: center;
     min-width: 0;
-    font-size: 0.9rem;
-    padding: 0.38rem 0.7rem;
+    font-size: 0.86rem;
+    padding: 0.3rem 0.55rem;
+    white-space: nowrap;
   }
 
   .stats .dir-btn {
-    font-size: 0.86rem;
-    padding: 0.32rem 0.65rem;
+    font-size: 0.84rem;
+    padding: 0.3rem 0.6rem;
   }
 
   .stat-learn input {
-    width: 3rem;
-    font-size: 0.95rem;
+    width: 2.75rem;
+    font-size: 0.88rem;
+  }
+
+  .session-progress {
+    font-size: 0.82rem;
+    padding: 0.28rem 0.5rem;
+  }
+
+  .stat-studied {
+    font-size: 0.86rem;
   }
 
   .footer-toolbar {
     flex-direction: row;
     flex-wrap: nowrap;
-    justify-content: center;
-    align-items: center;
-    gap: 0.35rem;
+    width: 100%;
+    gap: 0.4rem;
   }
 
-  .footer-actions,
-  .footer-actions-secondary {
-    width: auto;
+  .footer-actions {
+    flex: 3;
     margin-top: 0;
     flex-wrap: nowrap;
-    gap: 0.35rem;
+    gap: 0.4rem;
+  }
+
+  .footer-actions-secondary {
+    flex: 2;
+    margin-top: 0;
+    flex-wrap: nowrap;
+    gap: 0.4rem;
   }
 
   .footer-actions .sync-btn,
   .footer-actions-secondary .sync-btn {
-    flex: 0 1 auto;
+    flex: 1 1 0;
+    min-width: 0;
     max-width: none;
-    padding: 0.3rem 0.5rem;
-    min-height: 30px;
-    font-size: 0.7rem;
+    padding: 0.38rem 0.4rem;
+    min-height: 34px;
+    font-size: 0.74rem;
   }
 }
 

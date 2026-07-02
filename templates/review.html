@@ -28,7 +28,7 @@
         <input id="session-goal" type="number" min="1" max="999" value="{{ session_goal_default }}">
       </label>
       <span id="session-progress" class="session-progress">0 / {{ session_goal_default }}</span>
-      <span class="stat-available"><strong id="stat-available">{{ stats.due }}</strong> verfügbar</span>
+      <span class="stat-studied"><strong id="stat-studied">{{ stats.studied }}</strong> gelernt</span>
       <span><strong id="stat-total">{{ stats.total }}</strong> Karten</span>
       <span><strong id="stat-new">{{ stats.new }}</strong> neu</span>
     </div>
@@ -38,6 +38,7 @@
     <main id="card-area" class="card-area hidden">
       <div class="card" id="card">
         <div class="card-front" id="card-front"></div>
+        <p id="card-practice-label" class="card-practice-label hidden">Wiederholung — schon gelernt</p>
         <div id="hint-area" class="hint-area hidden">
           <button type="button" id="btn-hint" class="hint-btn" aria-expanded="false" aria-controls="hint-content">Hint</button>
           <div id="hint-content" class="hint-content hidden"></div>
@@ -106,7 +107,6 @@
     let resetStep = 0;
     let resetMode = "progress";
     let sessionDone = 0;
-    let cardsAvailable = {{ stats.due }};
     let directionCounts = { en_de: 0, de_en: 0 };
 
     const RESET_CONFIG = {
@@ -153,7 +153,7 @@
       syncStatus: document.getElementById("sync-status"),
       sessionGoal: document.getElementById("session-goal"),
       sessionProgress: document.getElementById("session-progress"),
-      statAvailable: document.getElementById("stat-available"),
+      statStudied: document.getElementById("stat-studied"),
       statTotal: document.getElementById("stat-total"),
       statNew: document.getElementById("stat-new"),
       emptyTitle: document.getElementById("empty-title"),
@@ -162,6 +162,7 @@
       resetStepText: document.getElementById("reset-step-text"),
       resetStep3: document.getElementById("reset-step-3"),
       resetInput: document.getElementById("reset-input"),
+      cardPracticeLabel: document.getElementById("card-practice-label"),
       importFile: document.getElementById("import-file"),
       resetStepIndicator: document.getElementById("reset-step-indicator"),
       btnResetNext: document.getElementById("btn-reset-next"),
@@ -225,8 +226,7 @@
     }
 
     function updateStats(stats) {
-      cardsAvailable = stats.due;
-      els.statAvailable.textContent = stats.due;
+      els.statStudied.textContent = stats.studied ?? 0;
       els.statTotal.textContent = stats.total;
       els.statNew.textContent = stats.new;
       updateSessionProgress();
@@ -257,7 +257,7 @@
     function showSessionComplete() {
       showEmptyState(
         `Session fertig — ${sessionDone} Karte${sessionDone === 1 ? "" : "n"} gelernt.`,
-        "Erhöhe die Zahl bei <strong>Lernen</strong>, um weiterzumachen, oder komm später wieder."
+        "Erhöhe die Zahl bei <strong>Lernen</strong>, um weiter zu üben — du bekommst dann Karten, die du schon gesehen hast."
       );
     }
 
@@ -297,6 +297,7 @@
       els.btnHint.setAttribute("aria-expanded", "false");
       els.hintContent.classList.add("hidden");
       els.hintContent.innerHTML = "";
+      els.cardPracticeLabel.classList.add("hidden");
     }
 
     function normalizeAnswer(value) {
@@ -444,6 +445,11 @@
       renderHint(card);
       els.cardBack.textContent = card.back;
       els.btnReveal.textContent = card.front.includes("_____") ? "Check answer" : "Show answer";
+      if (card.practice_mode) {
+        els.cardPracticeLabel.classList.remove("hidden");
+      } else {
+        els.cardPracticeLabel.classList.add("hidden");
+      }
       updateDirectionButtons();
       els.loadingState.classList.add("hidden");
       els.cardArea.classList.remove("hidden");

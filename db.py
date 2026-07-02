@@ -258,7 +258,9 @@ def get_card_in_group(group_key: str, direction: str) -> dict | None:
 
 
 def get_due_card(direction: str) -> dict | None:
+    """Return the next card to study, preferring due cards then extra practice."""
     init_db()
+    today_iso = today().isoformat()
     with connect() as conn:
         row = conn.execute(
             f"""
@@ -267,11 +269,27 @@ def get_due_card(direction: str) -> dict | None:
             ORDER BY due ASC, reps ASC, id ASC
             LIMIT 1
             """,
-            (today().isoformat(), direction, direction, direction),
+            (today_iso, direction, direction, direction),
         ).fetchone()
-        if not row:
-            return None
-        return _row_to_card(row, conn)
+        if row:
+            card = _row_to_card(row, conn)
+            card["practice_mode"] = False
+            return card
+
+        row = conn.execute(
+            f"""
+            SELECT * FROM cards
+            WHERE due > ? AND reps > 0 AND ({_direction_filter_sql()})
+            ORDER BY due ASC, id ASC
+            LIMIT 1
+            """,
+            (today_iso, direction, direction, direction),
+        ).fetchone()
+        if row:
+            card = _row_to_card(row, conn)
+            card["practice_mode"] = True
+            return card
+        return None
 
 
 def get_stats(direction: str | None = None) -> dict:
@@ -293,6 +311,13 @@ def get_stats(direction: str | None = None) -> dict:
                 """,
                 (direction, direction, direction),
             ).fetchone()[0]
+            studied = conn.execute(
+                f"""
+                SELECT COUNT(*) FROM cards
+                WHERE reps > 0 AND ({_direction_filter_sql()})
+                """,
+                (direction, direction, direction),
+            ).fetchone()[0]
         else:
             total = conn.execute("SELECT COUNT(*) FROM cards").fetchone()[0]
             due = conn.execute(
@@ -301,7 +326,10 @@ def get_stats(direction: str | None = None) -> dict:
             new_cards = conn.execute(
                 "SELECT COUNT(*) FROM cards WHERE reps = 0"
             ).fetchone()[0]
-    return {"total": total, "due": due, "new": new_cards}
+            studied = conn.execute(
+                "SELECT COUNT(*) FROM cards WHERE reps > 0"
+            ).fetchone()[0]
+    return {"total": total, "due": due, "new": new_cards, "studied": studied}
 
 
 def get_direction_counts() -> dict[str, int]:
