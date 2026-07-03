@@ -304,6 +304,43 @@
       return value.trim().toLowerCase().replace(/\s+/g, " ");
     }
 
+    function escapeRegExp(value) {
+      return value.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+    }
+
+    /** Words the learner must type into _____ blanks (not the full back sentence). */
+    function getClozeExpectedParts(card) {
+      const backPlain = stripHtmlTags(card.back_html || card.back || "");
+      const front = card.front || "";
+      const blankCount = front.split("_____").length - 1;
+      if (blankCount <= 0) return [];
+
+      if (card.back_html) {
+        const highlighted = [...card.back_html.matchAll(/<(?:strong|u)>([\s\S]*?)<\/(?:strong|u)>/gi)]
+          .map((m) => stripHtmlTags(m[1]).trim())
+          .filter(Boolean);
+        if (highlighted.length === blankCount) return highlighted;
+        if (highlighted.length > 0 && blankCount === 1) {
+          return [highlighted.join(" ")];
+        }
+      }
+
+      const segments = front.split("_____");
+      let pattern = "^";
+      for (let i = 0; i < segments.length; i++) {
+        pattern += escapeRegExp(segments[i]);
+        if (i < segments.length - 1) pattern += "([\\s\\S]*?)";
+      }
+      pattern += "$";
+      const match = backPlain.match(new RegExp(pattern));
+      if (match) {
+        return match.slice(1).map((part) => part.trim());
+      }
+
+      // Single blank whose back is only the answer word (not the full sentence).
+      return [backPlain.trim()];
+    }
+
     function resizeClozeInput(input) {
       const minCh = 6;
       const length = Math.max(minCh, input.value.length + 1);
@@ -346,23 +383,35 @@
     }
 
     function revealAnswer() {
-      const input = els.cardFront.querySelector(".cloze-input");
-      const hasCloze = Boolean(input);
+      const inputs = [...els.cardFront.querySelectorAll(".cloze-input")];
+      const hasCloze = inputs.length > 0;
 
       if (hasCloze) {
-        const userAnswer = normalizeAnswer(input.value);
-        const expected = normalizeAnswer(stripHtmlTags(currentCard.back_html || currentCard.back));
-        const correct = userAnswer === expected;
+        const typed = inputs.map((input) => input.value.trim());
+        const expectedParts = getClozeExpectedParts(currentCard);
+        const partResults = inputs.map((input, index) => {
+          const expected = expectedParts[index] ?? expectedParts.join(" ");
+          return normalizeAnswer(input.value) === normalizeAnswer(expected || "");
+        });
+        const correct =
+          expectedParts.length === inputs.length
+            ? partResults.every(Boolean)
+            : normalizeAnswer(typed.join(" ")) === normalizeAnswer(expectedParts.join(" "));
 
-        input.disabled = true;
-        input.classList.add(correct ? "correct" : "incorrect");
+        inputs.forEach((input, index) => {
+          input.disabled = true;
+          const partCorrect =
+            expectedParts.length === inputs.length ? partResults[index] : correct;
+          input.classList.add(partCorrect ? "correct" : "incorrect");
+        });
 
         els.cardBack.classList.toggle("correct", correct);
         els.cardBack.classList.toggle("incorrect", !correct);
         const statusLabel = correct ? "✓ Correct" : null;
+        const typedDisplay = typed.filter(Boolean).join(" ");
         els.cardBack.innerHTML = buildAnswerHtml(currentCard, {
           statusLabel,
-          userAnswer: userAnswer ? input.value.trim() : null,
+          userAnswer: typedDisplay || null,
         });
       } else {
         els.cardBack.classList.remove("correct", "incorrect");
